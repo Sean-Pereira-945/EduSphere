@@ -25,6 +25,29 @@ const catchAsync = require('./utils/catchAsync');
 
 const app = express();
 
+// ── Vercel / Proxy support ──
+app.set('trust proxy', 1);
+
+// ── Migration state ──
+let migrationPromise = null;
+const ensureMigration = async () => {
+  if (!migrationPromise) {
+    migrationPromise = migrate();
+  }
+  return migrationPromise;
+};
+
+// ── Middleware to ensure DB is ready ──
+app.use(async (req, res, next) => {
+  try {
+    await ensureMigration();
+    next();
+  } catch (err) {
+    console.error('Migration failed during request:', err.message);
+    next(new AppError('Database initialization failed', 500));
+  }
+});
+
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
@@ -876,15 +899,15 @@ app.use(errorHandler);
 
 // ── Start server ──
 
-// ── Start server (Only if not imported by Vercel) ──
+// ── Start server (Only if not imported as a module) ──
 
 const DEFAULT_PORT = Number(process.env.PORT) || 5000;
 
 if (require.main === module) {
   const startServer = async (port) => {
     try {
-      await migrate();
-      console.log('Neon PostgreSQL connected');
+      await ensureMigration();
+      console.log('Neon PostgreSQL connected and migrated');
     } catch (err) {
       console.error('Failed to connect to database:', err.message);
       process.exit(1);
