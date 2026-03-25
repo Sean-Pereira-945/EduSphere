@@ -876,8 +876,6 @@ app.use(errorHandler);
 
 // ── Start server ──
 
-const DEFAULT_PORT = Number(process.env.PORT) || 5000;
-
 // ── Start server (Only if not imported by Vercel) ──
 
 const DEFAULT_PORT = Number(process.env.PORT) || 5000;
