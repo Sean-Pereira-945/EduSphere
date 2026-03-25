@@ -868,22 +868,21 @@ function initTeacherDashboard() {
     });
 
     tableBody.querySelectorAll('[data-view-course-syllabus]').forEach((button) => {
-      button.addEventListener('click', async () => {
+      button.addEventListener('click', () => {
         const courseId = button.dataset.viewCourseSyllabus;
-        try {
-          const response = await fetch(`/api/courses/syllabus/${courseId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          });
-          if (!response.ok) throw new Error('Unable to load syllabus.');
-          const blob = await response.blob();
-          document.getElementById('syllabusImage').src = URL.createObjectURL(blob);
-          document.getElementById('syllabusTitle').textContent = button.dataset.courseTitle || 'Course Syllabus';
-          openModal('syllabusModal');
-        } catch (error) {
-          showToast(error.message, 'error');
+        const course = currentCourses.find((c) => String(c._id) === String(courseId));
+        
+        if (!course || !course.syllabusPath) {
+          showToast('Syllabus not found for this course.', 'error');
+          return;
         }
+
+        document.getElementById('syllabusImage').src = course.syllabusPath;
+        document.getElementById('syllabusTitle').textContent = course.name || 'Course Syllabus';
+        openModal('syllabusModal');
       });
     });
+
   };
 
   const loadRequests = async () => {
