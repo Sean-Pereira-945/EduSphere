@@ -619,46 +619,34 @@ function initStudentDashboard() {
     });
 
     document.querySelectorAll('[data-view-syllabus]').forEach((button) => {
-      button.addEventListener('click', async () => {
+      button.addEventListener('click', () => {
         const courseId = button.dataset.viewSyllabus;
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch(`/api/courses/syllabus/${courseId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (!response.ok) {
-            throw new Error('Unable to load syllabus.');
-          }
-          const contentType = response.headers.get('content-type') || '';
-          const blob = await response.blob();
-          if (activeSyllabusUrl) {
-            URL.revokeObjectURL(activeSyllabusUrl);
-          }
-          activeSyllabusUrl = URL.createObjectURL(blob);
-          resetSyllabusView();
-
-          if (contentType.includes('image/')) {
-            syllabusImage.style.display = 'block';
-            syllabusImage.src = activeSyllabusUrl;
-            showSyllabusStatus('');
-          } else {
-            syllabusImage.style.display = 'none';
-            showSyllabusStatus('Preview unavailable for this file type. Use Download to view the syllabus.', false);
-          }
-
-          if (syllabusDownload) {
-            syllabusDownload.href = activeSyllabusUrl;
-            syllabusDownload.download = `${button.dataset.courseTitle || 'course'}-syllabus`;
-          }
-          syllabusTitle.textContent = button.dataset.courseTitle || 'Course Syllabus';
-          openModal('syllabusModal');
-        } catch (error) {
-          syllabusImage.style.display = 'none';
-          showSyllabusStatus(error.message || 'Unable to load syllabus.', true);
-          showToast(error.message, 'error');
+        const course = allCourses.find((c) => String(c._id) === String(courseId));
+        
+        if (!course || !course.syllabusPath) {
+          showToast('Syllabus not found for this course.', 'error');
+          return;
         }
+
+        activeSyllabusUrl = course.syllabusPath;
+        resetSyllabusView();
+
+        // Since it's a Cloudinary URL, we can safely assume it's an image or let the browser handle it.
+        // We bypass the fetch entirely.
+        syllabusImage.style.display = 'block';
+        syllabusImage.src = activeSyllabusUrl;
+        showSyllabusStatus('');
+
+        if (syllabusDownload) {
+          syllabusDownload.href = activeSyllabusUrl;
+          syllabusDownload.download = `${course.name || 'course'}-syllabus`;
+        }
+        
+        syllabusTitle.textContent = course.name || 'Course Syllabus';
+        openModal('syllabusModal');
       });
     });
+
   };
 
   const loadCourses = async () => {
