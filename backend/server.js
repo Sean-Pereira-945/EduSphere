@@ -1,6 +1,6 @@
 console.log('API_BOOT: Loading server.js...');
 
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const express = require('express');
 const path = require('path');
@@ -152,13 +152,14 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://*.spline.design", "https://*.splinetool.com", "https://www.gstatic.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.spline.design", "https://*.splinetool.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "blob:", "https://*", "http://*"],
-        connectSrc: ["'self'"],
+        connectSrc: ["'self'", "https://*.spline.design", "https://*.splinetool.com", "https://prod.spline.design", "https://*.unsplash.com", "https://www.gstatic.com", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
-        frameSrc: ["'none'"],
+        frameSrc: ["'self'", "https://*.spline.design", "https://*.splinetool.com", "blob:", "data:"],
+        workerSrc: ["'self'", "blob:", "data:"],
         baseUri: ["'self'"],
         formAction: ["'self'"]
       }
@@ -182,6 +183,7 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Removed static upload routes as they are now served by Cloudinary
@@ -291,27 +293,23 @@ const fetchCoursesWithRelations = async (whereClause = '', params = []) => {
 // ── Page routes ──
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'home.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'about.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.get('/contact', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'contact.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'login.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
-app.get(['/registration', '/registration/', '/registration.html'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'registration.html'));
-});
-
-app.get('/register', (req, res) => {
-  res.redirect('/registration');
+app.get(['/registration', '/registration/', '/registration.html', '/register'], (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.get('/teacher-login', (req, res) => {
@@ -319,19 +317,19 @@ app.get('/teacher-login', (req, res) => {
 });
 
 app.get('/teacher-dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'teacher-dashboard.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.get('/student-dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'student-dashboard.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.get('/search', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'search-results.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.get('/course/:id', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'course-details.html'));
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.get('/health', (req, res) => {

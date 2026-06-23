@@ -1,15 +1,10 @@
 {
-  "name": "learning-platform-monorepo",
+  "name": "learning-platform-server",
   "version": "1.0.0",
-  "description": "EduSphere Virtual Learning Environment - Full Stack Monorepo",
-  "main": "backend/server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js",
-    "build:client": "npm run build --prefix client",
-    "install:client": "npm install --prefix client",
-    "install:backend": "npm install --prefix backend",
-    "install:all": "npm install && npm run install:client && npm run install:backend"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

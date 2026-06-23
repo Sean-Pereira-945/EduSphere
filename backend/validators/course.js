@@ -13,7 +13,8 @@ const createCourseSchema = Joi.object({
   schedule: Joi.string().trim().max(255).required(),
   capacity: Joi.number().integer().min(1).max(500).required(),
   category: Joi.string().valid(...categoryValues).required(),
-  logoUrl: Joi.string().trim().uri().allow('').optional()
+  logoUrl: Joi.string().trim().allow('').optional(),
+  syllabusUrl: Joi.string().trim().allow('').optional()
 });
 
 const updateCourseSchema = Joi.object({
@@ -22,7 +23,8 @@ const updateCourseSchema = Joi.object({
   schedule: Joi.string().trim().max(255).required(),
   capacity: Joi.number().integer().min(1).max(500).required(),
   category: Joi.string().valid(...categoryValues).optional(),
-  logoUrl: Joi.string().trim().uri().allow('').optional()
+  logoUrl: Joi.string().trim().allow('').optional(),
+  syllabusUrl: Joi.string().trim().allow('').optional()
 });
 
 module.exports = {

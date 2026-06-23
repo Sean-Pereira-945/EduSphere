@@ -1,0 +1,472 @@
+import React, { useState, useEffect } from 'react';
+
+export default function TeacherDashboard({ token, profile, onLogout }) {
+  const [courses, setCourses] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '' });
+
+  // Course Form States (Used for both Create and Edit)
+  const [courseName, setCourseName] = useState('');
+  const [description, setDescription] = useState('');
+  const [schedule, setSchedule] = useState('');
+  const [capacity, setCapacity] = useState('');
+  const [category, setCategory] = useState('Technical');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [syllabusUrl, setSyllabusUrl] = useState('https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=600');
+
+  // Edit State
+  const [editCourseId, setEditCourseId] = useState(null);
+
+  const triggerToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: '' }), 4000);
+  };
+
+  const fetchTeacherData = async () => {
+    if (!token) return;
+    try {
+      const coursesRes = await fetch('/api/courses/teacher', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const coursesData = await coursesRes.json();
+      if (coursesData.success) {
+        setCourses(coursesData.courses);
+      }
+
+      const requestsRes = await fetch('/api/enrollments/pending', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const requestsData = await requestsRes.json();
+      if (requestsData.success) {
+        setPendingRequests(requestsData.requests);
+      }
+    } catch (err) {
+      console.error('Error fetching teacher dashboard data:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeacherData();
+  }, [token]);
+
+  // Handle Approve / Reject
+  const handleUpdateStatus = async (requestId, status) => {
+    try {
+      const res = await fetch(`/api/enrollments/${requestId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Action failed');
+      }
+      triggerToast(`Enrollment request ${status} successfully.`);
+      fetchTeacherData();
+    } catch (err) {
+      triggerToast(`Action failed: ${err.message}`);
+    }
+  };
+
+  // Handle Delete Course
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm('Are you sure you want to delete this course?')) return;
+    try {
+      const res = await fetch(`/api/courses/${courseId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Deletion failed');
+      }
+      triggerToast('Course deleted successfully.');
+      fetchTeacherData();
+    } catch (err) {
+      triggerToast(`Deletion failed: ${err.message}`);
+    }
+  };
+
+  // Handle Save Course (Create / Edit)
+  const handleSaveCourse = async (e, courseId = null) => {
+    e.preventDefault();
+    if (!courseName || !description || !schedule || !capacity) return;
+
+    const url = courseId ? `/api/courses/${courseId}` : '/api/courses';
+    const method = courseId ? 'PUT' : 'POST';
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          courseName,
+          description,
+          schedule,
+          capacity: Number(capacity),
+          category,
+          logoUrl,
+          syllabusUrl
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to save course');
+      }
+
+      triggerToast(courseId ? 'Course updated successfully!' : 'Course created successfully!');
+      setEditCourseId(null);
+      setShowCreateForm(false);
+      resetForm();
+      fetchTeacherData();
+    } catch (err) {
+      triggerToast(`Save failed: ${err.message}`);
+    }
+  };
+
+  const startEdit = (course) => {
+    setEditCourseId(course._id);
+    setCourseName(course.name);
+    setDescription(course.description);
+    setSchedule(course.schedule);
+    setCapacity(course.capacity);
+    setCategory(course.category || 'Technical');
+    setLogoUrl(course.logo || '');
+    setSyllabusUrl(course.syllabusPath || '');
+  };
+
+  const cancelEdit = () => {
+    setEditCourseId(null);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setCourseName('');
+    setDescription('');
+    setSchedule('');
+    setCapacity('');
+    setCategory('Technical');
+    setLogoUrl('');
+    setSyllabusUrl('https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=600');
+  };
+
+  // Statistics summaries
+  const totalCourses = courses.length;
+  const totalStudents = courses.reduce((sum, c) => sum + (c.students?.length || 0), 0);
+  const capacityCourses = courses.filter(c => (c.students?.length || 0) >= c.capacity).length;
+
+  return (
+    <div className="edusphere-view-container" style={{ padding: '110px 40px 40px 40px', position: 'relative' }}>
+      
+      {/* Top Header Bar */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '35px',
+        flexWrap: 'wrap',
+        gap: '20px'
+      }}>
+        <div>
+          <h1 style={{
+            fontFamily: 'var(--font-heading)',
+            fontSize: '2.5rem',
+            fontWeight: '800',
+            background: 'linear-gradient(135deg, #ffffff, #93c5fd)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            Teacher Dashboard
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '4px' }}>
+            Manage enrollments, course directories, and syllabus lecture paths
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '15px' }}>
+          <button 
+            className="login-btn"
+            onClick={() => { resetForm(); setShowCreateForm(!showCreateForm); setEditCourseId(null); }}
+            style={{ background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo))', color: '#0f172a', fontWeight: 700 }}
+          >
+            {showCreateForm ? 'Cancel Creation' : '+ Create New Course'}
+          </button>
+        </div>
+      </div>
+
+      {/* Summary KPI Cards Row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '20px',
+        marginBottom: '40px'
+      }}>
+        <div className="edusphere-card" style={{ padding: '24px' }}>
+          <p style={{ fontSize: '0.75rem', fontFamily: 'var(--font-heading)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)' }}>
+            Total Courses
+          </p>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', fontWeight: '800', color: 'var(--accent-cyan)', marginTop: '10px' }}>
+            {totalCourses}
+          </h2>
+        </div>
+        <div className="edusphere-card" style={{ padding: '24px' }}>
+          <p style={{ fontSize: '0.75rem', fontFamily: 'var(--font-heading)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)' }}>
+            Total Enrolled Students
+          </p>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', fontWeight: '800', color: 'var(--accent-purple)', marginTop: '10px' }}>
+            {totalStudents}
+          </h2>
+        </div>
+        <div className="edusphere-card" style={{ padding: '24px' }}>
+          <p style={{ fontSize: '0.75rem', fontFamily: 'var(--font-heading)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)' }}>
+            Courses at Capacity
+          </p>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', fontWeight: '800', color: '#f59e0b', marginTop: '10px' }}>
+            {capacityCourses}
+          </h2>
+        </div>
+      </div>
+
+      {/* Pending Enrollments Table */}
+      {pendingRequests.length > 0 && (
+        <div className="edusphere-card" style={{ padding: '30px', marginBottom: '40px' }}>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: '700', marginBottom: '20px', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            Pending Enrollments 
+            <span style={{ fontSize: '0.8rem', background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: '20px' }}>
+              {pendingRequests.length}
+            </span>
+          </h2>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ padding: '12px 16px', color: '#fff' }}>Student</th>
+                  <th style={{ padding: '12px 16px', color: '#fff' }}>Course</th>
+                  <th style={{ padding: '12px 16px', color: '#fff' }}>Requested At</th>
+                  <th style={{ padding: '12px 16px', color: '#fff' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingRequests.map(req => (
+                  <tr key={req.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '16px' }}>
+                      <div style={{ color: '#fff', fontWeight: 600 }}>{req.student_name}</div>
+                      <div style={{ fontSize: '0.75rem' }}>{req.student_email}</div>
+                    </td>
+                    <td style={{ padding: '16px', color: '#fff' }}>{req.course_name}</td>
+                    <td style={{ padding: '16px' }}>{new Date(req.enrolled_at).toLocaleDateString()}</td>
+                    <td style={{ padding: '16px' }}>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button 
+                          onClick={() => handleUpdateStatus(req.id, 'approved')}
+                          className="login-btn"
+                          style={{ padding: '6px 15px', fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10b981' }}
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => handleUpdateStatus(req.id, 'rejected')}
+                          className="filter-pill"
+                          style={{ padding: '6px 15px', fontSize: '0.75rem', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#ef4444' }}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Create Course Specification Card */}
+      {showCreateForm && (
+        <div className="edusphere-card" style={{ padding: '30px', marginBottom: '30px', border: '1px solid var(--accent-cyan)' }}>
+          <h2 style={{ fontFamily: 'var(--font-heading)', color: '#fff', fontSize: '1.5rem', marginBottom: '20px' }}>
+            Create New Course Specification
+          </h2>
+          <form onSubmit={(e) => handleSaveCourse(e)} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="login-input-group">
+              <label className="login-label">Course Name</label>
+              <input type="text" className="login-input" required value={courseName} onChange={(e) => setCourseName(e.target.value)} />
+            </div>
+            <div className="login-input-group">
+              <label className="login-label">Category</label>
+              <select className="login-input" value={category} onChange={(e) => setCategory(e.target.value)} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}>
+                <option value="Technical">Technical</option>
+                <option value="Non-technical">Non-technical</option>
+                <option value="Self-Development">Self-Development</option>
+                <option value="Extra-curricular">Extra-curricular</option>
+              </select>
+            </div>
+            <div className="login-input-group" style={{ gridColumn: 'span 2' }}>
+              <label className="login-label">Description</label>
+              <textarea className="login-input" required rows="3" style={{ resize: 'none' }} value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+            <div className="login-input-group">
+              <label className="login-label">Schedule</label>
+              <input type="text" className="login-input" placeholder="Mon/Wed 3-5pm" required value={schedule} onChange={(e) => setSchedule(e.target.value)} />
+            </div>
+            <div className="login-input-group">
+              <label className="login-label">Capacity</label>
+              <input type="number" className="login-input" required value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+            </div>
+            <div className="login-input-group">
+              <label className="login-label">Logo Image URL (Optional)</label>
+              <input type="url" className="login-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+            </div>
+            <div className="login-input-group">
+              <label className="login-label">Syllabus URL (Optional)</label>
+              <input type="url" className="login-input" value={syllabusUrl} onChange={(e) => setSyllabusUrl(e.target.value)} />
+            </div>
+            <div style={{ gridColumn: 'span 2', display: 'flex', gap: '15px', marginTop: '10px' }}>
+              <button type="submit" className="login-btn" style={{ background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo))', color: '#0f172a', fontWeight: 700, border: 'none' }}>
+                Save Specifications
+              </button>
+              <button type="button" className="filter-pill" onClick={() => { setShowCreateForm(false); resetForm(); }}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Courses List (Horizontal Expanding Cards) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: '700', color: '#fff', marginBottom: '5px' }}>
+          My Courses
+        </h2>
+
+        {courses.length > 0 ? (
+          courses.map(c => {
+            const isEditing = editCourseId === c._id;
+            return (
+              <div 
+                key={c._id} 
+                className="edusphere-card" 
+                style={{ 
+                  padding: '24px', 
+                  border: isEditing ? '1px solid var(--accent-purple)' : '1px solid rgba(255,255,255,0.06)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {/* Header/Summary Card Row */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '20px'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <h3 style={{ fontSize: '1.3rem', fontWeight: '700', color: '#fff' }}>{c.name}</h3>
+                      <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        {c.category}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', gap: '15px' }}>
+                      <span>📅 {c.schedule}</span>
+                      <span>👥 Enrolled: {(c.students?.length || 0)} / {c.capacity}</span>
+                    </div>
+                  </div>
+
+                  {!isEditing && (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        onClick={() => startEdit(c)}
+                        className="filter-pill"
+                        style={{ padding: '8px 16px', fontSize: '0.8rem' }}
+                      >
+                        Edit Specs
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteCourse(c._id)}
+                        className="filter-pill"
+                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444' }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Inline Expanded Edit Form */}
+                {isEditing && (
+                  <div style={{
+                    marginTop: '24px',
+                    paddingTop: '20px',
+                    borderTop: '1px solid rgba(255,255,255,0.08)'
+                  }}>
+                    <form onSubmit={(e) => handleSaveCourse(e, c._id)} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      <div className="login-input-group">
+                        <label className="login-label">Course Name</label>
+                        <input type="text" className="login-input" required value={courseName} onChange={(e) => setCourseName(e.target.value)} />
+                      </div>
+                      <div className="login-input-group">
+                        <label className="login-label">Category</label>
+                        <select className="login-input" value={category} onChange={(e) => setCategory(e.target.value)} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}>
+                          <option value="Technical">Technical</option>
+                          <option value="Non-technical">Non-technical</option>
+                          <option value="Self-Development">Self-Development</option>
+                          <option value="Extra-curricular">Extra-curricular</option>
+                        </select>
+                      </div>
+                      <div className="login-input-group" style={{ gridColumn: 'span 2' }}>
+                        <label className="login-label">Description</label>
+                        <textarea className="login-input" required rows="3" style={{ resize: 'none' }} value={description} onChange={(e) => setDescription(e.target.value)} />
+                      </div>
+                      <div className="login-input-group">
+                        <label className="login-label">Schedule</label>
+                        <input type="text" className="login-input" required value={schedule} onChange={(e) => setSchedule(e.target.value)} />
+                      </div>
+                      <div className="login-input-group">
+                        <label className="login-label">Capacity</label>
+                        <input type="number" className="login-input" required value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+                      </div>
+                      <div className="login-input-group">
+                        <label className="login-label">Logo Image URL</label>
+                        <input type="url" className="login-input" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+                      </div>
+                      <div className="login-input-group">
+                        <label className="login-label">Syllabus URL</label>
+                        <input type="url" className="login-input" value={syllabusUrl} onChange={(e) => setSyllabusUrl(e.target.value)} />
+                      </div>
+                      <div style={{ gridColumn: 'span 2', display: 'flex', gap: '15px', marginTop: '10px' }}>
+                        <button type="submit" className="login-btn" style={{ background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo))', color: '#0f172a', fontWeight: 700, border: 'none' }}>
+                          Save Specifications
+                        </button>
+                        <button type="button" className="filter-pill" onClick={cancelEdit}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="edusphere-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            No courses directory found. Click "+ Create New Course" to add one.
+          </div>
+        )}
+      </div>
+
+      {/* Toast Notification */}
+      <div className={`warning-toast ${toast.show ? 'visible' : ''}`}>
+        {toast.message}
+      </div>
+
+    </div>
+  );
+}
