@@ -1,5 +1,48 @@
 import React, { useState } from 'react';
 
+function ImageWithFallback({ src, alt, height = '120px' }) {
+  const [error, setError] = useState(!src);
+  
+  if (error) {
+    const initials = alt
+      ? alt.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 3)
+      : 'EDU';
+      
+    return (
+      <div style={{ 
+        width: '100%', 
+        height, 
+        borderRadius: '12px', 
+        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--accent-cyan)',
+        fontFamily: 'var(--font-heading)',
+        fontSize: '1.8rem',
+        fontWeight: '800',
+        textShadow: '0 0 10px rgba(6, 182, 212, 0.3)',
+        letterSpacing: '0.05em',
+        marginBottom: '15px'
+      }}>
+        {initials}
+      </div>
+    );
+  }
+  
+  return (
+    <div style={{ width: '100%', height, borderRadius: '12px', overflow: 'hidden', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <img 
+        src={src} 
+        alt={alt} 
+        onError={() => setError(true)}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+      />
+    </div>
+  );
+}
+
 export default function CourseCatalog({ 
   courses, 
   enrolledIds, 
@@ -80,11 +123,7 @@ export default function CourseCatalog({
             return (
               <div key={course.id} className="edusphere-card course-card">
                 <div className="course-card-top">
-                  {course.logo && (
-                    <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <img src={course.logo} alt={course.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                  )}
+                  <ImageWithFallback src={course.logo} alt={course.name} height="140px" />
                   <div className="course-tag-row">
                     <span className={`dept-tag ${getDeptClass(course.department)}`}>
                       {course.department}
