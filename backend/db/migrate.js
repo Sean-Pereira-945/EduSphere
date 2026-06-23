@@ -117,6 +117,19 @@ const migrate = async () => {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS submissions (
+        id SERIAL PRIMARY KEY,
+        assignment_id INTEGER NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+        student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        file_path TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'submitted',
+        grade VARCHAR(50),
+        submitted_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(assignment_id, student_id)
+      );
+    `);
+
     // Indexes for performance
     await client.query(`CREATE INDEX IF NOT EXISTS idx_courses_teacher ON courses(teacher_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_courses_category ON courses(category);`);

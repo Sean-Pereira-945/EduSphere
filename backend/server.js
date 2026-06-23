@@ -764,6 +764,90 @@ app.post('/api/courses/:id/assignments', protect, restrictTo('teacher'), validat
   res.status(201).json(result.rows[0]);
 }));
 
+// ── Assignment Submissions & Grading ──
+
+app.post('/api/assignments/:id/submit', protect, restrictTo('student'), validateId('id'), materialUpload.single('file'), catchAsync(async (req, res, next) => {
+  if (!req.file) return next(new AppError('No submission file uploaded', 400));
+  
+  const assignmentId = req.params.id;
+  const studentId = req.user.id;
+  const filePath = req.file.path;
+
+  const assignmentCheck = await pool.query('SELECT id FROM assignments WHERE id = $1', [assignmentId]);
+  if (assignmentCheck.rows.length === 0) {
+    deleteIfExists(filePath);
+    return next(new AppError('Assignment not found', 404));
+  }
+
+  const result = await pool.query(
+    `INSERT INTO submissions (assignment_id, student_id, file_path, status, grade, submitted_at)
+     VALUES ($1, $2, $3, 'submitted', NULL, NOW())
+     ON CONFLICT (assignment_id, student_id)
+     DO UPDATE SET file_path = EXCLUDED.file_path, status = 'submitted', grade = NULL, submitted_at = NOW()
+     RETURNING *`,
+    [assignmentId, studentId, filePath]
+  );
+
+  res.status(201).json({ success: true, submission: result.rows[0] });
+}));
+
+app.get('/api/courses/:id/submissions', protect, restrictTo('student'), validateId('id'), catchAsync(async (req, res, next) => {
+  const result = await pool.query(
+    `SELECT s.id, s.assignment_id, s.file_path, s.status, s.grade, s.submitted_at
+     FROM submissions s
+     JOIN assignments a ON s.assignment_id = a.id
+     WHERE a.course_id = $1 AND s.student_id = $2`,
+    [req.params.id, req.user.id]
+  );
+  res.json({ success: true, submissions: result.rows });
+}));
+
+app.get('/api/courses/:id/teacher-submissions', protect, restrictTo('teacher'), validateId('id'), catchAsync(async (req, res, next) => {
+  const courseCheck = await pool.query('SELECT teacher_id FROM courses WHERE id = $1', [req.params.id]);
+  if (courseCheck.rows.length === 0 || courseCheck.rows[0].teacher_id !== req.user.id) {
+    return next(new AppError('Unauthorized', 403));
+  }
+
+  const result = await pool.query(
+    `SELECT s.id, s.assignment_id, s.file_path, s.status, s.grade, s.submitted_at,
+            u.id AS student_id, u.name AS student_name, u.email AS student_email,
+            a.title AS assignment_title
+     FROM submissions s
+     JOIN assignments a ON s.assignment_id = a.id
+     JOIN users u ON s.student_id = u.id
+     WHERE a.course_id = $1
+     ORDER BY s.submitted_at DESC`,
+    [req.params.id]
+  );
+  res.json({ success: true, submissions: result.rows });
+}));
+
+app.put('/api/submissions/:id/grade', protect, restrictTo('teacher'), validateId('id'), catchAsync(async (req, res, next) => {
+  const { grade } = req.body;
+  if (!grade) return next(new AppError('Grade is required', 400));
+
+  const subCheck = await pool.query(
+    `SELECT s.id, c.teacher_id 
+     FROM submissions s
+     JOIN assignments a ON s.assignment_id = a.id
+     JOIN courses c ON a.course_id = c.id
+     WHERE s.id = $1`,
+    [req.params.id]
+  );
+  if (subCheck.rows.length === 0) return next(new AppError('Submission not found', 404));
+  if (subCheck.rows[0].teacher_id !== req.user.id) return next(new AppError('Unauthorized', 403));
+
+  const result = await pool.query(
+    `UPDATE submissions
+     SET grade = $1, status = 'graded'
+     WHERE id = $2
+     RETURNING *`,
+    [grade, req.params.id]
+  );
+
+  res.json({ success: true, submission: result.rows[0] });
+}));
+
 
 // ── Enrollment ──
 

@@ -10,6 +10,66 @@ export default function CourseWorkspace({
   const [selectedOption, setSelectedOption] = useState(null);
   const [quizState, setQuizState] = useState('idle'); // 'idle' | 'selected' | 'correct' | 'incorrect'
 
+  // Assignments & Submissions states
+  const [activeTab, setActiveTab] = useState('lectures'); // 'lectures' | 'assignments'
+  const [assignments, setAssignments] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+
+  const fetchAssignmentsAndSubmissions = async () => {
+    if (!course || !course.id) return;
+    try {
+      const detailsRes = await fetch(`/api/courses/${course.id}/details`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const detailsData = await detailsRes.json();
+      if (detailsData.assignments) {
+        setAssignments(detailsData.assignments);
+      }
+
+      const subsRes = await fetch(`/api/courses/${course.id}/submissions`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const subsData = await subsRes.json();
+      if (subsData.success && subsData.submissions) {
+        setSubmissions(subsData.submissions);
+      }
+    } catch (err) {
+      console.error("Error fetching classroom assignments/submissions:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAssignmentsAndSubmissions();
+    setActiveTab('lectures');
+  }, [course]);
+
+  const handleFileUpload = async (e, assignmentId) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`/api/assignments/${assignmentId}/submit`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Assignment submitted successfully!");
+        fetchAssignmentsAndSubmissions();
+      } else {
+        alert("Submission failed: " + data.message);
+      }
+    } catch (err) {
+      alert("Submission error: " + err.message);
+    }
+  };
+
   const activeModule = course?.modules?.[activeModuleIndex];
   const isModuleCompleted = activeModule ? studentProfile.completedModules.includes(activeModule.id) : false;
 
@@ -186,37 +246,168 @@ export default function CourseWorkspace({
           </div>
         </div>
 
-        {/* Center: Slide Viewer */}
-        <div className="edusphere-card workspace-lecture-panel">
-          <div className="lecture-viewer-body">
-            {activeModule ? (
-              renderSlideContent(activeModule.content)
-            ) : (
-              <p>No content available for this module.</p>
-            )}
-          </div>
+        {/* Center: Slide Viewer / Assignments */}
+        <div className="edusphere-card workspace-lecture-panel" style={{ display: 'flex', flexDirection: 'column' }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '15px', marginTop: '20px' }}>
-            <button
-              className="filter-pill"
-              disabled={activeModuleIndex === 0}
-              onClick={() => setActiveModuleIndex(prev => prev - 1)}
-              style={{ opacity: activeModuleIndex === 0 ? 0.3 : 1, cursor: activeModuleIndex === 0 ? 'not-allowed' : 'pointer' }}
+          {/* Tab Bar */}
+          <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '20px', paddingBottom: '12px', gap: '15px' }}>
+            <button 
+              className={`filter-pill ${activeTab === 'lectures' ? 'active' : ''}`}
+              onClick={() => setActiveTab('lectures')}
+              style={{
+                padding: '8px 20px',
+                background: activeTab === 'lectures' ? 'var(--accent-cyan)' : 'transparent',
+                color: activeTab === 'lectures' ? '#0f172a' : 'var(--text-muted)',
+                borderColor: activeTab === 'lectures' ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.1)',
+                fontWeight: 600,
+                fontSize: '0.85rem'
+              }}
             >
-              Previous Module
+              📖 Slide Lectures
             </button>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-              Module {activeModuleIndex + 1} of {course.modules.length}
-            </span>
-            <button
-              className="filter-pill"
-              disabled={activeModuleIndex === course.modules.length - 1}
-              onClick={() => setActiveModuleIndex(prev => prev + 1)}
-              style={{ opacity: activeModuleIndex === course.modules.length - 1 ? 0.3 : 1, cursor: activeModuleIndex === course.modules.length - 1 ? 'not-allowed' : 'pointer' }}
+            <button 
+              className={`filter-pill ${activeTab === 'assignments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('assignments')}
+              style={{
+                padding: '8px 20px',
+                background: activeTab === 'assignments' ? 'var(--accent-purple)' : 'transparent',
+                color: activeTab === 'assignments' ? '#ffffff' : 'var(--text-muted)',
+                borderColor: activeTab === 'assignments' ? 'var(--accent-purple)' : 'rgba(255,255,255,0.1)',
+                fontWeight: 600,
+                fontSize: '0.85rem'
+              }}
             >
-              Next Module
+              📝 Assignments ({assignments.length})
             </button>
           </div>
+
+          {activeTab === 'lectures' ? (
+            <>
+              <div className="lecture-viewer-body" style={{ flexGrow: 1 }}>
+                {activeModule ? (
+                  renderSlideContent(activeModule.content)
+                ) : (
+                  <p>No content available for this module.</p>
+                )}
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '15px', marginTop: '20px' }}>
+                <button
+                  className="filter-pill"
+                  disabled={activeModuleIndex === 0}
+                  onClick={() => setActiveModuleIndex(prev => prev - 1)}
+                  style={{ opacity: activeModuleIndex === 0 ? 0.3 : 1, cursor: activeModuleIndex === 0 ? 'not-allowed' : 'pointer' }}
+                >
+                  Previous Module
+                </button>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                  Module {activeModuleIndex + 1} of {course.modules ? course.modules.length : 1}
+                </span>
+                <button
+                  className="filter-pill"
+                  disabled={course.modules ? activeModuleIndex === course.modules.length - 1 : true}
+                  onClick={() => setActiveModuleIndex(prev => prev + 1)}
+                  style={{ opacity: (course.modules && activeModuleIndex === course.modules.length - 1) ? 0.3 : 1, cursor: (course.modules && activeModuleIndex === course.modules.length - 1) ? 'not-allowed' : 'pointer' }}
+                >
+                  Next Module
+                </button>
+              </div>
+            </>
+          ) : (
+            // Assignments Tab Content
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', flexGrow: 1 }}>
+              <h3 style={{ fontSize: '1.25rem', color: '#fff', fontWeight: 700, marginBottom: '5px' }}>Course Assignments</h3>
+              {assignments.length > 0 ? (
+                assignments.map(ass => {
+                  const sub = submissions.find(s => s.assignment_id === ass.id);
+                  const isSubmitted = !!sub;
+                  const isGraded = sub?.status === 'graded';
+                  
+                  return (
+                    <div 
+                      key={ass.id} 
+                      style={{ 
+                        background: 'rgba(255,255,255,0.02)', 
+                        border: '1px solid rgba(255,255,255,0.06)', 
+                        borderRadius: '12px', 
+                        padding: '20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <h4 style={{ fontSize: '1.1rem', color: '#fff', fontWeight: 600 }}>{ass.title}</h4>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            📅 Due Date: {ass.due_date ? new Date(ass.due_date).toLocaleString() : 'No due date'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            padding: '3px 8px', 
+                            borderRadius: '12px', 
+                            fontWeight: 600,
+                            background: isGraded ? 'rgba(16, 185, 129, 0.1)' : (isSubmitted ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)'),
+                            color: isGraded ? '#10b981' : (isSubmitted ? '#3b82f6' : '#f59e0b')
+                          }}>
+                            {isGraded ? 'Graded' : (isSubmitted ? 'Handed In' : 'Assigned')}
+                          </span>
+                          {isGraded && (
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                              Grade: {sub.grade}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>{ass.description}</p>
+
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', marginTop: '5px' }}>
+                        {isSubmitted ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                              <span>📎 Submitted Work:</span>
+                              <a href={sub.file_path} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-cyan)', textDecoration: 'underline' }}>
+                                View Submission
+                              </a>
+                            </div>
+                            {!isGraded && (
+                              <label className="filter-pill" style={{ display: 'inline-flex', padding: '6px 12px', fontSize: '0.75rem', cursor: 'pointer', alignSelf: 'flex-start' }}>
+                                🔄 Resubmit File
+                                <input 
+                                  type="file" 
+                                  style={{ display: 'none' }} 
+                                  onChange={(e) => handleFileUpload(e, ass.id)} 
+                                />
+                              </label>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <label className="login-btn" style={{ padding: '8px 16px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                              📎 Add Submission File
+                              <input 
+                                type="file" 
+                                style={{ display: 'none' }} 
+                                onChange={(e) => handleFileUpload(e, ass.id)} 
+                              />
+                            </label>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Attach work and mark as done</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  No assignments posted for this course track yet.
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: Active Quiz */}
