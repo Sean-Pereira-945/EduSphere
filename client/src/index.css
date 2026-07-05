@@ -1,6 +1,6 @@
 /* Core CSS variables for a premium, harmonious cyber-dark theme */
 :root {
-    --bg-color: #060913;
+    --bg-color: #000000;
     --text-color: #ffffff;
     --text-muted: #8a99ad;
     --accent-cyan: #00f2fe;
@@ -50,9 +50,11 @@ body {
     z-index: 1;
     overflow: hidden; /* Crop WebGL watermark logo */
     pointer-events: auto; /* Allows base pointer actions */
+    background: #000000; /* Force pure black behind the Spline canvas */
 }
 
-#canvas3d {
+#canvas3d,
+#canvas3d canvas {
     width: calc(100% + 220px) !important;
     height: calc(100% + 120px) !important;
     position: absolute;
@@ -60,6 +62,7 @@ body {
     top: -60px !important;
     display: block;
     outline: none;
+    background: #000000 !important; /* CSS fallback for Spline scene background */
 }
 
 /* Premium Loading Overlay */

@@ -9,6 +9,48 @@ export default function CubesHero({ onLoadComplete }) {
   const handleSplineLoad = (splineApp) => {
     console.log('3D Scene loaded. Cleaning up UI components...');
 
+    // ── Strip the Spline scene background completely ──────────────────────────
+    try {
+      const renderer = splineApp.renderer || splineApp._renderer;
+      if (renderer) {
+        // Method 1: transparent clear color (alpha = 0)
+        if (renderer.setClearColor) renderer.setClearColor(0x000000, 0);
+        if (renderer.setClearAlpha) renderer.setClearAlpha(0);
+
+        // Method 2: mark renderer as alpha-capable
+        if (renderer.gl) renderer.gl.clearColor(0, 0, 0, 0);
+
+        // Method 3: make the underlying canvas DOM element transparent
+        const canvas = renderer.domElement;
+        if (canvas) {
+          canvas.style.background = 'transparent';
+          canvas.style.backgroundColor = 'transparent';
+        }
+      }
+
+      // Method 4: hide Spline's internal scene background object
+      const backgroundNames = [
+        'Background', 'background', 'Scene Background',
+        'Environment', 'Sky', 'Backdrop'
+      ];
+      backgroundNames.forEach(name => {
+        const obj = splineApp.findObjectByName(name);
+        if (obj) {
+          obj.visible = false;
+          console.log(`Hidden background: ${name}`);
+        }
+      });
+
+      // Method 5: null out scene background via Three.js scene reference
+      const scene = splineApp.scene || splineApp._scene;
+      if (scene) {
+        scene.background = null;
+        scene.environment = null;
+      }
+    } catch (e) {
+      console.warn('Background removal error:', e);
+    }
+
     // List of elements to hide to isolate the interactive cube grid
     const objectsToHide = [
       'Text', 'Text 2', 'Text 3', 'Text 4', 'Text 5', 'Text 6', 'Text 7',
@@ -17,29 +59,22 @@ export default function CubesHero({ onLoadComplete }) {
       'Ellipse'
     ];
 
-    // Hide each target object programmatically
     objectsToHide.forEach(name => {
       const obj = splineApp.findObjectByName(name);
       if (obj) {
         obj.visible = false;
         console.log(`Hidden object: ${name}`);
-      } else {
-        console.warn(`Object not found in scene tree: ${name}`);
       }
     });
 
-    // Notify parent component (for loader overlay fade out)
-    if (onLoadComplete) {
-      onLoadComplete();
-    }
+    if (onLoadComplete) onLoadComplete();
 
-    // Show interaction hint overlay after a small delay
     setTimeout(() => {
-      if (!interacted) {
-        setShowHint(true);
-      }
+      if (!interacted) setShowHint(true);
     }, 800);
   };
+
+
 
   const handlePointerDown = () => {
     setInteracted(true);
