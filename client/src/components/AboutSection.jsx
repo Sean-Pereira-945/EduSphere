@@ -63,7 +63,7 @@ export default function AboutSection({ sectionRef }) {
       className="section-container"
       ref={sectionRef}
       onMouseMove={handleMouseMove}
-      style={{ padding: '80px 0', background: 'rgba(10,20,38,0.2)' }}
+      style={{ padding: '80px 0', background: 'transparent' }}
     >
       <div className="section-content">
         <div style={{
