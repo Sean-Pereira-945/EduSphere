@@ -1,37 +1,41 @@
-# Dependencies
+# ─── Dependencies ─────────────────────────────────────────────────────────────
 node_modules/
 jspm_packages/
 
-# Environment Variables
+# ─── Environment / Secrets ────────────────────────────────────────────────────
+# IMPORTANT: Never commit real secrets. Use .env.example as a template.
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-!.env.example
+backend/.env
 
-# Build/Dist
-.dist/
+# ─── Build / Dist ─────────────────────────────────────────────────────────────
 dist/
 build/
+.dist/
 bin/
 obj/
+client/dist/
 
-# Uploads
-uploads/courses/*
-uploads/syllabus/*
-!uploads/courses/.gitignore
-!uploads/syllabus/.gitignore
+# ─── Uploads (local only — Cloudinary handles production) ─────────────────────
+uploads/
+backend/uploads/
 
-# Logs
+# ─── Scratch / Diagnostic scripts (dev-only, not production code) ─────────────
+backend/diagnostics.js
+backend/check_teachers.js
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-logs/
-*.log
 
-# OS generated files
+# ─── OS Generated ─────────────────────────────────────────────────────────────
 .DS_Store
 .DS_Store?
 ._*
@@ -39,8 +43,9 @@ logs/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# IDEs and editors
+# ─── IDEs and Editors ─────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
@@ -48,3 +53,12 @@ Thumbs.db
 .project
 .classpath
 .settings/
+
+# ─── Vite / Tooling ───────────────────────────────────────────────────────────
+.vite/
+.eslintcache
+*.tsbuildinfo
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+.vercel/
+.netlify/

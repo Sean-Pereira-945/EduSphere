@@ -143,6 +143,11 @@ const migrate = async () => {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_announcements_course ON announcements(course_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_assignments_course ON assignments(course_id);`);
 
+    // Add file_path to assignments if not present (non-destructive upgrade)
+    try {
+      await client.query(`ALTER TABLE assignments ADD COLUMN IF NOT EXISTS file_path TEXT`);
+    } catch(e) {}
+
     // Full-text search index on courses
     await client.query(`
       DO $$ BEGIN

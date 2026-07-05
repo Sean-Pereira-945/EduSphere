@@ -652,7 +652,7 @@ app.get('/api/courses/:id/details', protect, validateId('id'), catchAsync(async 
   );
 
   const assignmentsResult = await pool.query(
-    'SELECT id, title, description, due_date, created_at FROM assignments WHERE course_id = $1 ORDER BY created_at DESC',
+    'SELECT id, title, description, due_date, file_path, created_at FROM assignments WHERE course_id = $1 ORDER BY created_at DESC',
     [courseId]
   );
 
@@ -745,10 +745,39 @@ app.post('/api/courses/:id/announcements', protect, restrictTo('teacher'), valid
     'INSERT INTO announcements (course_id, content) VALUES ($1, $2) RETURNING *',
     [req.params.id, content]
   );
+
+  // Email notifications for announcements
+  try {
+    const courseResult = await pool.query('SELECT name FROM courses WHERE id = $1', [req.params.id]);
+    const courseName = courseResult.rows[0]?.name || 'Course';
+    
+    // Fetch all approved students
+    const studentsResult = await pool.query(
+      `SELECT u.name, u.email 
+       FROM enrollments e 
+       JOIN users u ON e.student_id = u.id 
+       WHERE e.course_id = $1 AND e.status = 'approved'`,
+      [req.params.id]
+    );
+
+    if (studentsResult.rows.length > 0) {
+      const sendEmail = require('./utils/email');
+      studentsResult.rows.forEach(student => {
+        sendEmail({
+          to: student.email,
+          subject: `New Announcement in ${courseName}`,
+          text: `Hello ${student.name},\n\nYour instructor posted a new announcement in "${courseName}":\n\n"${content}"\n\nBest regards,\nLLC@FRCRCE Team`
+        }).catch(err => console.error("SMTP announcement email error:", err));
+      });
+    }
+  } catch (err) {
+    console.error("Announcement notification query error:", err);
+  }
+
   res.status(201).json(result.rows[0]);
 }));
 
-app.post('/api/courses/:id/assignments', protect, restrictTo('teacher'), validateId('id'), catchAsync(async (req, res, next) => {
+app.post('/api/courses/:id/assignments', protect, restrictTo('teacher'), validateId('id'), materialUpload.single('file'), catchAsync(async (req, res, next) => {
   const { title, description, due_date } = req.body;
   if (!title || !description) return next(new AppError('Title and description required', 400));
   
@@ -757,12 +786,46 @@ app.post('/api/courses/:id/assignments', protect, restrictTo('teacher'), validat
     return next(new AppError('Unauthorized or course not found', 403));
   }
 
+  // Optional file attachment (PDF etc.) uploaded via Cloudinary
+  const filePath = req.file ? req.file.path : null;
+
   const result = await pool.query(
-    'INSERT INTO assignments (course_id, title, description, due_date) VALUES ($1, $2, $3, $4) RETURNING *',
-    [req.params.id, title, description, due_date || null]
+    'INSERT INTO assignments (course_id, title, description, due_date, file_path) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [req.params.id, title, description, due_date || null, filePath]
   );
-  res.status(201).json(result.rows[0]);
+
+  // Email notifications for assignments
+  try {
+    const courseResult = await pool.query('SELECT name FROM courses WHERE id = $1', [req.params.id]);
+    const courseName = courseResult.rows[0]?.name || 'Course';
+    
+    // Fetch all approved students
+    const studentsResult = await pool.query(
+      `SELECT u.name, u.email 
+       FROM enrollments e 
+       JOIN users u ON e.student_id = u.id 
+       WHERE e.course_id = $1 AND e.status = 'approved'`,
+      [req.params.id]
+    );
+
+    if (studentsResult.rows.length > 0) {
+      const sendEmail = require('./utils/email');
+      const formattedDueDate = due_date ? new Date(due_date).toLocaleString() : 'TBA';
+      studentsResult.rows.forEach(student => {
+        sendEmail({
+          to: student.email,
+          subject: `New Assignment Posted: ${title} in ${courseName}`,
+          text: `Hello ${student.name},\n\nA new assignment has been posted for the course "${courseName}".\n\nTitle: ${title}\nDescription: ${description}\nDue Date: ${formattedDueDate}\n\nPlease submit your work before the deadline.\n\nBest regards,\nLLC@FRCRCE Team`
+        }).catch(err => console.error("SMTP assignment email error:", err));
+      });
+    }
+  } catch (err) {
+    console.error("Assignment notification query error:", err);
+  }
+
+  res.status(201).json({ ...result.rows[0], success: true });
 }));
+
 
 // ── Assignment Submissions & Grading ──
 
@@ -945,6 +1008,33 @@ app.put('/api/enrollments/:id/status', protect, restrictTo('teacher'), validateI
   if (check.rows.length === 0 || check.rows[0].teacher_id !== req.user.id) return next(new AppError('Unauthorized', 403));
   
   await pool.query('UPDATE enrollments SET status = $1 WHERE id = $2', [status, req.params.id]);
+
+  // Email notifications for enrollment status changes
+  try {
+    const infoQuery = await pool.query(
+      `SELECT u.name AS student_name, u.email AS student_email, c.name AS course_name 
+       FROM enrollments e 
+       JOIN users u ON e.student_id = u.id 
+       JOIN courses c ON e.course_id = c.id 
+       WHERE e.id = $1`,
+      [req.params.id]
+    );
+    if (infoQuery.rows.length > 0) {
+      const student = infoQuery.rows[0];
+      const emailSubject = `Enrollment Status Update: ${student.course_name}`;
+      const emailText = `Hello ${student.student_name},\n\nYour enrollment request for the course "${student.course_name}" has been ${status} by the instructor.\n\nBest regards,\nLLC@FRCRCE Team`;
+      
+      const sendEmail = require('./utils/email');
+      sendEmail({
+        to: student.student_email,
+        subject: emailSubject,
+        text: emailText
+      }).catch(err => console.error("SMTP enrollment status email error:", err));
+    }
+  } catch (err) {
+    console.error("Enrollment status notification query error:", err);
+  }
+
   res.json({ success: true, message: `Enrollment ${status}` });
 }));
 

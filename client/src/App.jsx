@@ -15,6 +15,9 @@ import { initialCourses } from './coursesData';
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentView, setCurrentView] = useState('home'); // 'home' | 'login' | 'register' | 'dashboard' | 'catalog' | 'workspace'
+
+  // Read userType synchronously so routing decisions are never stale
+  const getUserType = () => localStorage.getItem('userType') || '';
   
   // Ref for high-performance scroll animation
   const robotRef = useRef(null);
@@ -27,6 +30,7 @@ export default function App() {
   
   // Student enrollment state
   const [enrolledIds, setEnrolledIds] = useState([]);
+  const [enrollmentStatuses, setEnrollmentStatuses] = useState({});
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
   const [activeCourseDetails, setActiveCourseDetails] = useState(null);
   
@@ -49,47 +53,82 @@ export default function App() {
   // Fetch active courses and enrollments from Express
   const fetchUserData = async (authToken) => {
     if (!authToken) return;
+    const role = localStorage.getItem('userType') || '';
     try {
-      // Fetch all courses
-      const coursesRes = await fetch('/api/courses/student', {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      const coursesData = await coursesRes.json();
-      
-      // Fetch my enrollments
-      const enrollmentsRes = await fetch('/api/enrollments/my', {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      const enrollmentsData = await enrollmentsRes.json();
+      if (role === 'teacher') {
+        // Teachers only load their own courses — no enrollment data needed
+        const coursesRes = await fetch('/api/courses/teacher', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const coursesData = await coursesRes.json();
+        if (coursesData.success) {
+          const mapped = coursesData.courses.map(c => ({
+            id: String(c._id),
+            code: `${c.category || 'COURSE'}-${c._id}`,
+            name: c.name,
+            department: c.category || 'General',
+            credits: 4,
+            professor: c.teacher ? c.teacher.name : 'Staff',
+            instructor: c.teacher ? c.teacher.name : 'Staff',
+            schedule: c.schedule || 'TBA',
+            seatsAvailable: c.capacity - ((c.students || []).length),
+            totalSeats: c.capacity || 30,
+            description: c.description || '',
+            syllabus: c.syllabusPath || '',
+            logo: c.logo || '',
+            enrolledCount: (c.students || []).length,
+          }));
+          setCourses(mapped);
+        }
+      } else {
+        // Students load all available courses + their own enrollments
+        const coursesRes = await fetch('/api/courses/student', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const coursesData = await coursesRes.json();
 
-      if (coursesData.success) {
-        const mapped = coursesData.courses.map(c => ({
-          id: String(c._id),
-          code: `${c.category || 'COURSE'}-${c._id}`,
-          name: c.name,
-          department: c.category || 'General',
-          credits: 4, // Default credits for schedule allocation math
-          professor: c.teacher ? c.teacher.name : 'Professor Staff',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100',
-          schedule: c.schedule || 'TBA',
-          seatsAvailable: c.capacity - (c.enrolledCount || 0),
-          totalSeats: c.capacity || 30,
-          description: c.description || '',
-          syllabus: c.syllabusPath || '',
-          logo: c.logo || '',
-          progress: 0
-        }));
-        setCourses(mapped);
+        const enrollmentsRes = await fetch('/api/enrollments/my', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const enrollmentsData = await enrollmentsRes.json();
 
-        if (enrollmentsData.success) {
-          // Map enrollments (approved or pending)
-          const enrolledList = enrollmentsData.enrollments
-            .filter(e => e.status === 'approved' || e.status === 'pending')
-            .map(e => String(e.course_id));
-          setEnrolledIds(enrolledList);
-          
-          if (enrolledList.length > 0 && !activeWorkspaceId) {
-            setActiveWorkspaceId(enrolledList[0]);
+        if (coursesData.success) {
+          const mapped = coursesData.courses.map(c => ({
+            id: String(c._id),
+            code: `${c.category || 'COURSE'}-${c._id}`,
+            name: c.name,
+            department: c.category || 'General',
+            credits: 4,
+            professor: c.teacher ? c.teacher.name : 'Professor Staff',
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100',
+            schedule: c.schedule || 'TBA',
+            seatsAvailable: c.capacity - (c.enrolledCount || 0),
+            totalSeats: c.capacity || 30,
+            description: c.description || '',
+            syllabus: c.syllabusPath || '',
+            logo: c.logo || '',
+            progress: 0
+          }));
+          setCourses(mapped);
+
+          if (enrollmentsData.success) {
+            const statuses = {};
+            enrollmentsData.enrollments.forEach(e => {
+              statuses[String(e.course_id)] = e.status;
+            });
+            setEnrollmentStatuses(statuses);
+
+            const enrolledList = enrollmentsData.enrollments
+              .filter(e => e.status === 'approved' || e.status === 'pending')
+              .map(e => String(e.course_id));
+            setEnrolledIds(enrolledList);
+
+            const approvedList = enrollmentsData.enrollments
+              .filter(e => e.status === 'approved')
+              .map(e => String(e.course_id));
+            if (approvedList.length > 0 && !activeWorkspaceId) {
+              setActiveWorkspaceId(approvedList[0]);
+            }
           }
         }
       }
@@ -177,6 +216,46 @@ export default function App() {
     setTimeout(handleScroll, 100);
 
     return () => window.removeEventListener('scroll', handleScroll);
+  }, [currentView]);
+
+  // ── Global card fade-in observer ──
+  // Runs whenever the view changes so newly mounted cards are always picked up.
+  useEffect(() => {
+    // Short delay so React finishes painting the new view's DOM
+    const setupTimeout = setTimeout(() => {
+      const CARD_SELECTORS = [
+        '.edusphere-card',
+        '.google-classroom-card',
+        '.course-card',
+      ].join(', ');
+
+      const cards = Array.from(document.querySelectorAll(CARD_SELECTORS));
+
+      // Reset animation state for fresh cards (not already visible)
+      cards.forEach((card) => {
+        if (!card.classList.contains('card-visible')) {
+          card.classList.add('card-animate');
+        }
+      });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('card-visible');
+              observer.unobserve(entry.target); // animate once
+            }
+          });
+        },
+        { threshold: 0.1 }
+      );
+
+      cards.forEach((card) => observer.observe(card));
+
+      return () => observer.disconnect();
+    }, 80);
+
+    return () => clearTimeout(setupTimeout);
   }, [currentView]);
 
   // Trigger Toast Warning
@@ -350,7 +429,7 @@ export default function App() {
     setActiveWorkspaceId(null);
     setActiveCourseDetails(null);
     setCurrentView('home');
-    triggerToast('Logged out of Student Portal.');
+    triggerToast('Logged out successfully.');
   };
 
   // When clicking classroom entry in Dashboard
@@ -460,20 +539,20 @@ export default function App() {
                     marginBottom: '15px',
                     textShadow: '0 0 10px rgba(0, 242, 254, 0.3)'
                   }}>
-                    "Learning through Indulgence"
+                    "Learning & Leadership Center"
                   </div>
-                  <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '3rem', fontWeight: '800', lineHeight: '1.2', background: 'linear-gradient(135deg, #ffffff, #93c5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '20px' }}>
-                    Welcome to EduSphere
+                  <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontStyle: 'italic', fontSize: '3.2rem', fontWeight: '800', lineHeight: '1.15', background: 'linear-gradient(135deg, #ffffff, #93c5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '20px' }}>
+                    Build skills that go beyond the classroom
                   </h1>
                   <p style={{ fontSize: '1.1rem', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px' }}>
-                    An immersive academic classroom designed for curious minds. Track credits, manage courses, and dive into interactive quizzes in a next-gen digital experience.
+                    Bridging the gap between academic theory and institutional excellence through rigorous professional development and leadership mentoring.
                   </p>
                   <div style={{ display: 'flex', gap: '15px' }}>
-                    <button className="login-btn" style={{ padding: '12px 30px', fontSize: '0.9rem' }} onClick={() => setCurrentView('login')}>
-                      Enter Portal
+                    <button className="login-btn" style={{ padding: '12px 30px', fontSize: '0.9rem' }} onClick={() => setCurrentView('catalog')}>
+                      Browse Courses →
                     </button>
-                    <button className="filter-pill" style={{ padding: '12px 30px', fontSize: '0.9rem' }} onClick={() => handleScrollToSection('about')}>
-                      Learn More
+                    <button className="filter-pill" style={{ padding: '12px 30px', fontSize: '0.9rem' }} onClick={() => setCurrentView('login')}>
+                      Join as Teacher
                     </button>
                   </div>
                 </div>
@@ -524,17 +603,19 @@ export default function App() {
       )}
 
       {currentView === 'dashboard' && (
-        studentProfile.userType === 'teacher' ? (
+        getUserType() === 'teacher' ? (
           <TeacherDashboard 
             token={token}
             profile={studentProfile}
             onLogout={handleLogout}
+            onNavigateToWorkspace={handleNavigateToWorkspace}
           />
         ) : (
           <Dashboard 
             studentProfile={studentProfile}
             courses={courses}
             enrolledIds={enrolledIds}
+            enrollmentStatuses={enrollmentStatuses}
             onNavigateToWorkspace={handleNavigateToWorkspace}
             onNavigateToCatalog={() => setCurrentView('catalog')}
             onEnroll={handleEnroll}
@@ -547,10 +628,13 @@ export default function App() {
         <CourseCatalog 
           courses={courses}
           enrolledIds={enrolledIds}
+          enrollmentStatuses={enrollmentStatuses}
           onEnroll={handleEnroll}
           onDrop={handleDrop}
           creditsLimit={studentProfile.creditsLimit}
           currentCredits={currentCredits}
+          userType={getUserType()}
+          onNavigateToWorkspace={handleNavigateToWorkspace}
         />
       )}
 
@@ -558,6 +642,8 @@ export default function App() {
         <CourseWorkspace 
           course={activeCourseDetails || activeCourse}
           studentProfile={studentProfile}
+          userType={studentProfile.userType}
+          token={token}
           onCompleteModule={handleCompleteModule}
           onBackToDashboard={() => setCurrentView('dashboard')}
         />
