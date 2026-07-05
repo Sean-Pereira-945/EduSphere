@@ -1,17 +1,11 @@
 {
   "version": 2,
   "name": "edusphere",
-  "builds": [
-    {
-      "src": "backend/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "client/dist/**"
-        ]
-      }
+  "functions": {
+    "backend/server.js": {
+      "includeFiles": "client/dist/**"
     }
-  ],
+  },
   "rewrites": [
     {
       "source": "/uploads/(.*)",
