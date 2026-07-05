@@ -1,89 +1,144 @@
-# 📖 LLCFRCRCE - Course Registration System
+# 🎓 EduSphere — Learning Management System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-v14+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-v18+-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-v18-blue.svg)](https://reactjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-teal.svg)](https://neon.tech/)
 
-A professional course registration and management platform designed to streamline student course preferences and reduce administrative workload.
+> A modern, full-stack Learning Management System with role-based dashboards, file uploads via Cloudinary, and a premium glassmorphism UI.
 
 ---
 
 ## 🚀 Project Overview
 
-**LLCFRCRCE** is a mini-project developed to facilitate an efficient and user-friendly process for course enrollment. This system enables students to browse available courses, view detailed syllabi and schedules, and enroll in their preferred courses—all within an intuitive interface.
+**EduSphere** is a full-stack LMS built for colleges and universities. It provides a seamless experience for both students and teachers:
 
-Teachers are provided with tools to manage and update course information, ensuring accuracy and ease of administration. The primary objective is to **digitize the course registration workflow**, making it more transparent, manageable, and less error-prone than traditional manual or spreadsheet-based systems.
+- **Students** can browse the course catalog, enroll in courses, view syllabi, access module materials, and submit assignments.
+- **Teachers** can create and manage courses (with logo + syllabus uploads), add modules and materials, post assignments with PDF attachments, grade submissions, and approve/reject enrollment requests.
+
+The platform is built on a **React + Express monorepo** with a **Neon PostgreSQL** database and **Cloudinary** for all file storage.
 
 ---
 
 ## ✨ Key Features
 
-- **✅ Student Interface:** Browse comprehensive course listings, access syllabus, schedule, and instructor info, and enroll seamlessly.
-- **✅ Teacher Interface:** Add/edit course details and manage enrolled student lists.
-- **✅ Administrative Benefits:** Automates preference collection, removes Excel dependency, and centralizes data for reporting.
+### 👨‍🎓 Student Portal
+- Browse the full course catalog with search & category filters
+- One-click enrollment with pending/approved status tracking
+- Course workspace: access modules, materials, announcements, and assignments
+- Submit assignments directly in the browser
+
+### 👩‍🏫 Teacher Dashboard
+- Create / edit / delete courses with drag-and-drop logo and syllabus uploads
+- Add course modules and upload lecture materials (PDFs, images)
+- Post assignments with optional PDF attachments
+- View and grade student submissions
+- Approve or reject enrollment requests in real time
+
+### 🎨 Design & UX
+- Premium glassmorphism dark-mode UI
+- Custom-themed dropdowns (no native OS widgets)
+- 3D Spline robot on the landing and login pages
+- Smooth micro-animations and loading states throughout
 
 ---
 
-## 🛠️ Installation Guide
+## 🛠️ Tech Stack
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Sean-Pereira-945/LLC-FRCRCE.git
-   ```
-
-2. **Navigate to the project directory:**
-   ```bash
-   cd LLCFRCRCE
-   ```
-
-3. **Install required dependencies:**
-   ```bash
-   npm install
-   ```
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, Vite, Vanilla CSS |
+| Backend | Node.js, Express |
+| Database | PostgreSQL (Neon serverless) |
+| File Storage | Cloudinary |
+| Auth | JWT (7-day expiry) |
+| 3D / Animation | Spline |
 
 ---
 
-## ⚙️ Usage Instructions
+## ⚙️ Getting Started
 
-Once installed, start the application using:
-
+### 1. Clone the repo
 ```bash
-npm start
+git clone https://github.com/Sean-Pereira-945/EduSphere.git
+cd EduSphere
 ```
 
-The server will launch, allowing access to the web interface via your browser at [http://localhost:3000](http://localhost:3000).
+### 2. Install dependencies
+```bash
+# Root (concurrently runs both servers)
+npm install
+
+# Backend
+cd backend && npm install
+
+# Frontend
+cd client && npm install
+```
+
+### 3. Configure environment variables
+```bash
+cp backend/.env.example backend/.env
+```
+Open `backend/.env` and fill in your credentials:
+- **DATABASE_URL** — your Neon (or any Postgres) connection string
+- **JWT_SECRET** — any long random string
+- **CLOUDINARY_*** — your Cloudinary cloud name, API key, and secret
+
+### 4. Run in development
+```bash
+# From the project root — starts both backend (port 5000) and frontend (port 5173)
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
+
+## 📁 Project Structure
+
+```
+EduSphere/
+├── backend/
+│   ├── server.js          # Express app, all API routes
+│   ├── db/
+│   │   └── migrate.js     # Auto-migration on startup
+│   ├── validators/        # Joi validation schemas
+│   ├── utils/             # Email helper, etc.
+│   └── .env.example       # Environment variable template
+├── client/
+│   ├── src/
+│   │   ├── App.jsx        # Root component, routing, auth state
+│   │   ├── components/    # All page-level and shared components
+│   │   └── index.css      # Global design system & animations
+│   └── index.html         # Entry HTML (tab title, meta, fonts)
+├── package.json           # Root scripts (concurrently)
+└── vercel.json            # Deployment config
+```
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! To contribute:
-
-1. Fork the repository.
-2. Create a new feature branch: `git checkout -b feature-name`
-3. Commit your changes: `git commit -m "Add feature-name"`
-4. Push your branch: `git push origin feature-name`
-5. Open a Pull Request.
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m "feat: describe your change"`
+4. Push your branch: `git push origin feature/your-feature`
+5. Open a Pull Request
 
 ---
 
 ## 📜 License
 
-This project is licensed under the **MIT License** — feel free to use, modify, and distribute it.
+This project is licensed under the **MIT License** — free to use, modify, and distribute.
 
 ---
 
 ## 📧 Contact
 
-For inquiries, feedback, or suggestions:
-- 📩 Email: [blazexander44@gmail.com](mailto:blazexander44@gmail.com)
+For questions or feedback:
+- 📩 [blazexander44@gmail.com](mailto:blazexander44@gmail.com)
 
 ---
 
-## ❤️ Acknowledgments
-
-We extend our sincere gratitude to:
-- **Prof. Roshni** – For providing the opportunity to work on this project and guiding us throughout its development.
-
----
-
-*Thank you for exploring **LLCFRCRCE**! We hope it proves beneficial for both students and faculty.*
+*Thank you for exploring **EduSphere**! Built with ❤️ for students and educators.*
