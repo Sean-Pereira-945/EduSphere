@@ -137,7 +137,7 @@ This project is licensed under the **MIT License** — free to use, modify, and 
 ## 📧 Contact
 
 For questions or feedback:
-- 📩 [blazexander44@gmail.com](mailto:blazexander44@gmail.com)
+- 📩 [seanpereira945@gmail.com](mailto:seanpereira945@gmail.com)
 
 ---
 
