@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "name": "learning-platform-server",
+  "name": "edusphere",
   "builds": [
     {
-      "src": "server.js",
+      "src": "backend/server.js",
       "use": "@vercel/node"
     }
   ],
@@ -14,7 +14,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/server.js"
+      "destination": "/backend/server.js"
     }
   ]
 }
