@@ -988,6 +988,7 @@ body {
     z-index: 2;
     pointer-events: none; /* Let pointer events fall through to interactive Cubes background in empty spaces */
     padding: 120px 40px 60px 40px;
+    scroll-margin-top: 110px; /* Offset fixed header overlap */
 }
 
 .section-content {

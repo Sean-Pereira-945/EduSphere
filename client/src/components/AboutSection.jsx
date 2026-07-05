@@ -41,13 +41,13 @@ export default function AboutSection({ sectionRef }) {
       id="about"
       className="section-container"
       ref={sectionRef}
-      style={{ padding: '120px 0', background: 'transparent' }}
+      style={{ padding: '20px 40px 40px 40px', minHeight: 'auto', background: 'transparent' }}
     >
-      <div className="section-content">
+      <div className="section-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1.6fr',
-          gap: '60px',
+          gap: '30px',
           alignItems: 'start',
         }}>
 
@@ -55,7 +55,7 @@ export default function AboutSection({ sectionRef }) {
           <div 
             className="about-robot-placeholder" 
             style={{ 
-              minHeight: '450px',
+              minHeight: '320px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -63,40 +63,41 @@ export default function AboutSection({ sectionRef }) {
           />
 
           {/* ── Right: Content & Bento Feature Grid ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
             {/* Header Area */}
             <div>
               <div style={{
                 fontFamily: 'var(--font-heading)',
-                fontSize: '0.85rem',
+                fontSize: '0.8rem',
                 fontWeight: '700',
                 color: 'var(--accent-cyan)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.25em',
-                marginBottom: '12px',
+                marginBottom: '6px',
                 textShadow: '0 0 10px rgba(0, 242, 254, 0.2)'
               }}>
                 Institutional Vision
               </div>
               <h2 style={{
                 fontFamily: "'Space Grotesk', sans-serif",
-                fontSize: '2.8rem',
+                fontSize: '2.0rem',
                 fontWeight: '800',
                 lineHeight: '1.2',
                 background: 'linear-gradient(135deg, #ffffff 40%, #94a3b8)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                marginBottom: '16px',
+                marginBottom: '8px',
                 letterSpacing: '-0.02em'
               }}>
                 Bridging theory with industry readiness
               </h2>
               <p style={{
-                fontSize: '1.05rem',
+                fontSize: '0.94rem',
                 color: 'var(--text-muted)',
-                lineHeight: '1.7',
+                lineHeight: '1.5',
                 maxWidth: '620px',
+                margin: 0
               }}>
                 The <strong style={{ color: '#fff' }}>Learning &amp; Leadership Center</strong> serves as Fr. CRCE's premier academic incubator—combining structured coursework, assignments, and mentorship into a singular cyber-dark portal.
               </p>
@@ -105,17 +106,17 @@ export default function AboutSection({ sectionRef }) {
             {/* Bento Grid layout for Pillars */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '20px',
-              marginTop: '10px'
+              gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+              gap: '12px',
+              marginTop: '5px'
             }}>
               {PILLARS.map((p, i) => (
                 <div
                   key={i}
                   className="edusphere-card"
                   style={{
-                    padding: '28px',
-                    borderRadius: '16px',
+                    padding: '16px 20px',
+                    borderRadius: '12px',
                     background: 'rgba(255, 255, 255, 0.01)',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                     transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -123,12 +124,12 @@ export default function AboutSection({ sectionRef }) {
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '15px'
+                    gap: '8px'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = p.border;
-                    e.currentTarget.style.boxShadow = `0 10px 30px -10px ${p.glow}, inset 0 0 15px ${p.glow}`;
-                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = `0 8px 24px -8px ${p.glow}, inset 0 0 10px ${p.glow}`;
+                    e.currentTarget.style.transform = 'translateY(-2px)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
@@ -141,7 +142,7 @@ export default function AboutSection({ sectionRef }) {
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    width: '4px',
+                    width: '3px',
                     height: '100%',
                     background: p.color,
                     opacity: 0.8
@@ -151,7 +152,7 @@ export default function AboutSection({ sectionRef }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{
                       fontFamily: 'var(--font-heading)',
-                      fontSize: '1rem',
+                      fontSize: '0.85rem',
                       fontWeight: '800',
                       color: p.color,
                       letterSpacing: '0.05em'
@@ -159,11 +160,11 @@ export default function AboutSection({ sectionRef }) {
                       {p.num}
                     </span>
                     <div style={{
-                      width: '6px',
-                      height: '6px',
+                      width: '5px',
+                      height: '5px',
                       borderRadius: '50%',
                       background: p.color,
-                      boxShadow: `0 0 8px ${p.color}`
+                      boxShadow: `0 0 6px ${p.color}`
                     }} />
                   </div>
 
@@ -171,17 +172,17 @@ export default function AboutSection({ sectionRef }) {
                   <div>
                     <h3 style={{
                       fontFamily: 'var(--font-heading)',
-                      fontSize: '1.2rem',
+                      fontSize: '1.05rem',
                       fontWeight: '700',
                       color: '#ffffff',
-                      marginBottom: '8px'
+                      marginBottom: '4px'
                     }}>
                       {p.title}
                     </h3>
                     <p style={{
-                      fontSize: '0.88rem',
+                      fontSize: '0.8rem',
                       color: 'var(--text-muted)',
-                      lineHeight: '1.6',
+                      lineHeight: '1.45',
                       margin: 0
                     }}>
                       {p.desc}
