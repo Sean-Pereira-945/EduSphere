@@ -2,7 +2,7 @@
   "version": 2,
   "name": "edusphere",
   "functions": {
-    "backend/server.js": {
+    "api/index.js": {
       "includeFiles": "client/dist/**"
     }
   },
@@ -13,7 +13,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/backend/server.js"
+      "destination": "/api/index.js"
     }
   ]
 }
